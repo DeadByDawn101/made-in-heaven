@@ -17,6 +17,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { buildLoginTask, WAIT_FOR_AUTOFILL, SAVED_CREDENTIALS } from "./password-manager.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,9 @@ const grok = new OpenAI({
   baseURL: "https://api.x.ai/v1",
 });
 
+// Available xAI models (confirmed 2026-02-26)
+const GROK_MODEL = process.env.GROK_MODEL || "grok-4-0709";
+
 // ── MCP Client ────────────────────────────────────────────────────────────────
 
 async function createMCPClient() {
@@ -56,19 +60,25 @@ async function createMCPClient() {
 // ── X-Native Search via Grok ──────────────────────────────────────────────────
 
 async function grokXSearch(query) {
-  console.log(`  🐦 Grok X-Search: "${query}"`);
+  console.log(`  🐦 Grok X-Search (live): "${query}"`);
   const resp = await grok.chat.completions.create({
-    model: "grok-4",
+    model: GROK_MODEL,
     messages: [
       {
         role: "system",
-        content: "You are Grok, built by xAI with native access to X (Twitter). When asked to search X, provide real-time results from the platform including post content, engagement metrics, and trends. Be precise and data-driven.",
+        content: "You are Grok, built by xAI with native real-time access to X (Twitter). Search X live and return precise, data-driven results with engagement metrics.",
       },
       {
         role: "user",
-        content: `Search X right now for: "${query}"\n\nReturn the top 5 most relevant/viral posts with: author, content summary, likes, reposts, and why it's trending. Include any relevant links or CAs if visible.`,
+        content: `Search X RIGHT NOW for: "${query}"\n\nReturn the top 5 most relevant/viral posts with: author handle, content summary, likes, reposts, and why it's trending. Include any CAs or links visible.`,
       },
     ],
+    // Enable Grok's live X search
+    search_parameters: {
+      mode: "on",
+      sources: [{ type: "x" }],
+      return_citations: true,
+    },
   });
   return resp.choices[0].message.content;
 }
@@ -88,12 +98,18 @@ WORKFLOW:
 5. Use list_console_messages() to debug JS errors
 6. Use list_network_requests() to intercept API calls and get raw data
 
+LOGIN STRATEGY (always try in this order):
+1. Check if Chrome already auto-filled credentials (Google Password Manager)
+2. Look for "Sign in with Google" → gothravenllm@gmail.com is always available
+3. Manual fill only as last resort — use React-safe injection via evaluate_script
+
 RULES:
 - Complete tasks fully before stopping
 - On failure, try alternative approach
 - Use take_snapshot not take_screenshot (screenshots time out)
 - Use evaluate_script to extract structured data from pages
-- Be precise and data-driven in your final answer`;
+- Be precise and data-driven in your final answer
+- Chrome is logged into gothravenllm@gmail.com — Google auth works on any site`;
 
 const GROK_SYSTEM = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser AND native X (Twitter) access.
 Named after Pucci's final Stand in JoJo's Stone Ocean. You see everything — browser AND the X firehose simultaneously.
@@ -205,11 +221,17 @@ async function runGrok(client, tools, task) {
     console.log(`\n── Step ${step}/${MAX_STEPS} (Grok-4) ──────────────────────`);
 
     const response = await grok.chat.completions.create({
-      model: "grok-4",
+      model: GROK_MODEL,
       messages,
       tools: grokTools,
       tool_choice: "auto",
       max_tokens: 4096,
+      // Live X search for Grok — real-time firehose alongside browser tools
+      search_parameters: {
+        mode: "auto",
+        sources: [{ type: "x" }, { type: "web" }],
+        return_citations: true,
+      },
     });
 
     const msg = response.choices[0].message;

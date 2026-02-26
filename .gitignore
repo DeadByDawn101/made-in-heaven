@@ -5,3 +5,6 @@ node_modules/
 screenshots/
 traces/
 .DS_Store
+memory/20*.md
+memory/task-index.json
+memory/sites/

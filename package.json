@@ -1,0 +1,34 @@
+{
+  "name": "project-mariner",
+  "version": "0.1.0",
+  "description": "Autonomous web agent powered by Chrome DevTools MCP — full browser control, zero automation fingerprint",
+  "main": "src/mariner.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/mariner.js",
+    "dev": "node --watch src/mariner.js",
+    "chrome": "open -a 'Google Chrome Canary' --args --remote-debugging-port=9222 --no-first-run --no-default-browser-check",
+    "mcp:list": "chrome-devtools-mcp --help"
+  },
+  "keywords": [
+    "web-agent",
+    "mcp",
+    "chrome-devtools",
+    "autonomous-agent",
+    "browser-automation",
+    "ai-agent",
+    "project-mariner"
+  ],
+  "author": "DeadByDawn101 + RavenX AI",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@modelcontextprotocol/sdk": "^1.5.0"
+  },
+  "devDependencies": {
+    "chrome-devtools-mcp": "^0.18.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

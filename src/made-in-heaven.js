@@ -116,6 +116,21 @@ RULES:
 - Use take_snapshot not take_screenshot
 - Be precise, be fast, be ruthless with alpha extraction`;
 
+// ── React-Safe Input Injection ────────────────────────────────────────────────
+// X, Gmail, and most modern apps use React-controlled inputs.
+// Standard CDP fill() updates the DOM value but React never fires — form stays empty.
+// This snippet uses React's internal nativeInputValueSetter to properly trigger state.
+export const REACT_FILL = (selector, value) =>
+  `() => {
+    const inp = document.querySelector("${selector}");
+    if (!inp) return "no input: ${selector}";
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(inp, ${JSON.stringify(value)});
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+    return "filled " + inp.value.length + " chars";
+  }`;
+
 // ── Tool Call Executor ────────────────────────────────────────────────────────
 
 async function callTool(client, name, args) {

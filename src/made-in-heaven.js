@@ -60,27 +60,33 @@ async function createMCPClient() {
 // ── X-Native Search via Grok ──────────────────────────────────────────────────
 
 async function grokXSearch(query) {
-  console.log(`  🐦 Grok X-Search (live): "${query}"`);
-  const resp = await grok.chat.completions.create({
-    model: GROK_MODEL,
-    messages: [
-      {
-        role: "system",
-        content: "You are Grok, built by xAI with native real-time access to X (Twitter). Search X live and return precise, data-driven results with engagement metrics.",
-      },
-      {
-        role: "user",
-        content: `Search X RIGHT NOW for: "${query}"\n\nReturn the top 5 most relevant/viral posts with: author handle, content summary, likes, reposts, and why it's trending. Include any CAs or links visible.`,
-      },
-    ],
-    // Enable Grok's live X search
-    search_parameters: {
-      mode: "on",
-      sources: [{ type: "x" }],
-      return_citations: true,
+  console.log(`  🐦 Grok X-Search (Responses API / native fetch): "${query}"`);
+  // OpenAI SDK mangles the key for xAI's Responses endpoint — use fetch directly
+  const resp = await fetch("https://api.x.ai/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.XAI_API_KEY}`,
     },
+    body: JSON.stringify({
+      model: "grok-4-1-fast-non-reasoning",
+      input: [{
+        role: "user",
+        content: `Search X RIGHT NOW for: "${query}"\n\nReturn the top 5 most relevant/viral posts with: author handle, content summary, likes, reposts, and why it's trending. Include any CAs or contract addresses visible.`,
+      }],
+      tools: [{ type: "x_search" }, { type: "web_search" }],
+    }),
   });
-  return resp.choices[0].message.content;
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  // Extract the final text message from output array
+  const text = data.output
+    ?.filter(o => o.type === "message")
+    ?.flatMap(o => o.content || [])
+    ?.filter(c => c.type === "output_text")
+    ?.map(c => c.text)
+    ?.join("\n") || "No text output";
+  return text;
 }
 
 // ── System Prompts ────────────────────────────────────────────────────────────
@@ -221,17 +227,12 @@ async function runGrok(client, tools, task) {
     console.log(`\n── Step ${step}/${MAX_STEPS} (Grok-4) ──────────────────────`);
 
     const response = await grok.chat.completions.create({
-      model: GROK_MODEL,
+      model: GROK_MODEL, // grok-4-0709 for browser/MCP tasks (function calling)
       messages,
       tools: grokTools,
       tool_choice: "auto",
       max_tokens: 4096,
-      // Live X search for Grok — real-time firehose alongside browser tools
-      search_parameters: {
-        mode: "auto",
-        sources: [{ type: "x" }, { type: "web" }],
-        return_citations: true,
-      },
+      // Note: live x_search uses Responses API (separate from MCP tool calls)
     });
 
     const msg = response.choices[0].message;

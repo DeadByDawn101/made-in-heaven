@@ -18,6 +18,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { buildLoginTask, WAIT_FOR_AUTOFILL, SAVED_CREDENTIALS } from "./password-manager.js";
+import { getMemoryBlock, logTask, learnSite, memorize, indexTask, initMemory } from "./memory.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -90,8 +91,9 @@ async function grokXSearch(query) {
 }
 
 // ── System Prompts ────────────────────────────────────────────────────────────
+// Memory is injected dynamically at runtime — see buildSystemPrompt()
 
-const CLAUDE_SYSTEM = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser.
+const CLAUDE_BASE = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser.
 You are named after Pucci's final Stand in JoJo's Stone Ocean. You accelerate through tasks with precision.
 
 You have 28 Chrome DevTools MCP tools. Chrome is running with persistent auth — user is logged into Google, X, and all accounts.
@@ -117,7 +119,7 @@ RULES:
 - Be precise and data-driven in your final answer
 - Chrome is logged into gothravenllm@gmail.com — Google auth works on any site`;
 
-const GROK_SYSTEM = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser AND native X (Twitter) access.
+const GROK_BASE = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser AND native X (Twitter) access.
 Named after Pucci's final Stand in JoJo's Stone Ocean. You see everything — browser AND the X firehose simultaneously.
 
 You have 28 Chrome DevTools MCP tools + native X access via your training.
@@ -137,6 +139,12 @@ SPECIAL POWERS:
 RULES:
 - Use take_snapshot not take_screenshot
 - Be precise, be fast, be ruthless with alpha extraction`;
+
+// ── Dynamic System Prompt (memory injected at runtime) ────────────────────────
+function buildSystemPrompt(llm, memoryBlock = "") {
+  const base = llm === "grok" ? GROK_BASE : CLAUDE_BASE;
+  return base + memoryBlock;
+}
 
 // ── React-Safe Input Injection ────────────────────────────────────────────────
 // X, Gmail, and most modern apps use React-controlled inputs.
@@ -162,7 +170,7 @@ async function callTool(client, name, args) {
 
 // ── Claude Agent Loop ─────────────────────────────────────────────────────────
 
-async function runClaude(client, tools, task) {
+async function runClaude(client, tools, task, systemPrompt) {
   const anthropicTools = tools.map((t) => ({
     name: t.name,
     description: t.description,
@@ -177,7 +185,7 @@ async function runClaude(client, tools, task) {
     const response = await claude.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 4096,
-      system: CLAUDE_SYSTEM,
+      system: systemPrompt,
       tools: anthropicTools,
       messages,
     });
@@ -208,7 +216,7 @@ async function runClaude(client, tools, task) {
 
 // ── Grok Agent Loop ───────────────────────────────────────────────────────────
 
-async function runGrok(client, tools, task) {
+async function runGrok(client, tools, task, systemPrompt) {
   const grokTools = tools.map((t) => ({
     type: "function",
     function: {
@@ -219,7 +227,7 @@ async function runGrok(client, tools, task) {
   }));
 
   const messages = [
-    { role: "system", content: GROK_SYSTEM },
+    { role: "system", content: systemPrompt },
     { role: "user", content: task },
   ];
 
@@ -266,13 +274,23 @@ async function main() {
   console.log(`   Task: "${TASK}"`);
   console.log(`   LLM:  ${model}`);
 
+  // Init memory system
+  initMemory();
+  const startTime = Date.now();
+
   // Optional standalone X search (no browser needed)
   if (X_SEARCH) {
     console.log("\n🐦 X-Native Mode (Grok)");
     const result = await grokXSearch(X_SEARCH);
     console.log("\n" + result);
+    logTask({ task: X_SEARCH, url: "x.com", llm: "grok-x-search", steps: 1, result });
     return;
   }
+
+  // Load memory — inject into system prompt
+  const memoryBlock = getMemoryBlock();
+  if (memoryBlock) console.log(`🧠 Memory loaded (${memoryBlock.split("\n").length} lines)`);
+  const systemPrompt = buildSystemPrompt(LLM, memoryBlock);
 
   console.log(`\n⚡ Connecting to Chrome at ${CHROME_URL}...`);
   const client = await createMCPClient();
@@ -280,15 +298,34 @@ async function main() {
   console.log(`✓ ${tools.length} DevTools tools ready\n`);
 
   let result;
+  let steps = 0;
+  const stepTracker = { count: 0 };
+
   if (LLM === "grok") {
-    result = await runGrok(client, tools, TASK);
+    result = await runGrok(client, tools, TASK, systemPrompt);
   } else {
-    result = await runClaude(client, tools, TASK);
+    result = await runClaude(client, tools, TASK, systemPrompt);
   }
 
   console.log(`\n${"═".repeat(60)}`);
   console.log(result);
   console.log(`${"═".repeat(60)}\n`);
+
+  // Write memory after task
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  logTask({
+    task: TASK,
+    url: CHROME_URL,
+    llm: model,
+    steps: elapsed + "s",
+    result: result?.slice(0, 300),
+  });
+  indexTask({
+    task: TASK,
+    url: CHROME_URL,
+    success: !result?.includes("Error"),
+    summary: result?.slice(0, 200),
+  });
 
   await client.close();
   console.log("🖤 Made in Heaven — session complete\n");

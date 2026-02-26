@@ -73,7 +73,8 @@ WORKFLOW:
 RULES:
 - Complete the task fully before stopping
 - If something fails, try an alternative approach
-- Take a screenshot at the end to confirm completion
+- Use take_snapshot to confirm page state (avoid take_screenshot — it times out)
+- Use evaluate_script to extract data that isn't in the a11y snapshot
 - Be explicit about what you did and what you found
 - Never ask for clarification — make your best judgment and execute
 

@@ -1,13 +1,15 @@
 {
-  "name": "project-mariner",
-  "version": "0.1.0",
-  "description": "Autonomous web agent powered by Chrome DevTools MCP — full browser control, zero automation fingerprint",
-  "main": "src/mariner.js",
+  "name": "made-in-heaven",
+  "version": "0.2.0",
+  "description": "Autonomous web agent — Chrome DevTools MCP + Grok/Claude + native X integration. JoJo Stone Ocean.",
+  "main": "src/made-in-heaven.js",
   "type": "module",
   "scripts": {
-    "start": "node src/mariner.js",
-    "dev": "node --watch src/mariner.js",
-    "chrome": "open -a 'Google Chrome Canary' --args --remote-debugging-port=9222 --no-first-run --no-default-browser-check",
+    "start": "node --env-file=.env src/made-in-heaven.js",
+    "dev": "node --watch --env-file=.env src/made-in-heaven.js",
+    "grok": "node --env-file=.env src/made-in-heaven.js --llm grok",
+    "x-search": "node --env-file=.env src/made-in-heaven.js --x-search",
+    "chrome": "bash scripts/launch-chrome.sh",
     "mcp:list": "chrome-devtools-mcp --help"
   },
   "keywords": [
@@ -23,7 +25,9 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
-    "@modelcontextprotocol/sdk": "^1.5.0"
+    "@modelcontextprotocol/sdk": "^1.5.0",
+    "@modelcontextprotocol/server-filesystem": "^2026.1.14",
+    "openai": "^6.25.0"
   },
   "devDependencies": {
     "chrome-devtools-mcp": "^0.18.1"

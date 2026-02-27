@@ -10,7 +10,11 @@
     "grok": "node --env-file=.env src/made-in-heaven.js --llm grok",
     "x-search": "node --env-file=.env src/made-in-heaven.js --x-search",
     "chrome": "bash scripts/launch-chrome.sh",
-    "mcp:list": "chrome-devtools-mcp --help"
+    "mcp:list": "chrome-devtools-mcp --help",
+    "pentest": "node --env-file=.env src/pentest.js",
+    "pentest:solana": "node --env-file=.env src/pentest.js --target solana",
+    "pentest:ravenx": "node --env-file=.env src/pentest.js --target ravenx",
+    "pentest:env": "node --env-file=.env src/pentest.js --target env"
   },
   "keywords": [
     "web-agent",

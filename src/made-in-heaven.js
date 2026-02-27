@@ -19,6 +19,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { buildLoginTask, WAIT_FOR_AUTOFILL, SAVED_CREDENTIALS } from "./password-manager.js";
 import { getMemoryBlock, logTask, learnSite, memorize, indexTask, initMemory } from "./memory.js";
+import { SOLANA_TOOLS, dispatchSolanaTool } from "./solana.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ async function grokXSearch(query) {
 const CLAUDE_BASE = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser.
 You are named after Pucci's final Stand in JoJo's Stone Ocean. You accelerate through tasks with precision.
 
-You have 28 Chrome DevTools MCP tools. Chrome is running with persistent auth — user is logged into Google, X, and all accounts.
+You have 28 Chrome DevTools MCP tools + 7 native Solana RPC tools (solana_get_balance, solana_get_token_accounts, solana_get_token_supply, solana_get_recent_transactions, solana_get_transaction, solana_get_account_info, solana_health). Chrome is running with persistent auth — user is logged into Google, X, and all accounts.
 
 WORKFLOW:
 1. Start with take_snapshot() to see current page state
@@ -111,6 +112,13 @@ LOGIN STRATEGY (always try in this order):
 2. Look for "Sign in with Google" → gothravenllm@gmail.com is always available
 3. Manual fill only as last resort — use React-safe injection via evaluate_script
 
+SOLANA WORKFLOW:
+- Use solana_health first to verify RPC connection
+- Use solana_get_balance for SOL balances
+- Use solana_get_token_accounts to see all SPL tokens in a wallet
+- Use solana_get_recent_transactions + solana_get_transaction to trace on-chain activity
+- Combine browser data (DexScreener, pump.fun) with Solana RPC data for full alpha
+
 RULES:
 - Complete tasks fully before stopping
 - On failure, try alternative approach
@@ -122,7 +130,7 @@ RULES:
 const GROK_BASE = `You are Made in Heaven — an autonomous web agent with full control of a real Chrome browser AND native X (Twitter) access.
 Named after Pucci's final Stand in JoJo's Stone Ocean. You see everything — browser AND the X firehose simultaneously.
 
-You have 28 Chrome DevTools MCP tools + native X access via your training.
+You have 28 Chrome DevTools MCP tools + native X access via your training + 7 native Solana RPC tools (solana_get_balance, solana_get_token_accounts, solana_get_token_supply, solana_get_recent_transactions, solana_get_transaction, solana_get_account_info, solana_health).
 
 WORKFLOW:
 1. take_snapshot() to see current page
@@ -164,6 +172,12 @@ export const REACT_FILL = (selector, value) =>
 // ── Tool Call Executor ────────────────────────────────────────────────────────
 
 async function callTool(client, name, args) {
+  // Route Solana tools directly (no MCP — native RPC)
+  if (name.startsWith("solana_")) {
+    const result = await dispatchSolanaTool(name, args);
+    return JSON.stringify(result, null, 2);
+  }
+  // All other tools → Chrome DevTools MCP
   const result = await client.callTool({ name, arguments: args });
   return result.content?.map((c) => c.text || JSON.stringify(c)).join("\n") || JSON.stringify(result);
 }
@@ -294,8 +308,15 @@ async function main() {
 
   console.log(`\n⚡ Connecting to Chrome at ${CHROME_URL}...`);
   const client = await createMCPClient();
-  const { tools } = await client.listTools();
-  console.log(`✓ ${tools.length} DevTools tools ready\n`);
+  const { tools: mcpTools } = await client.listTools();
+  // Merge: 28 DevTools tools + 7 Solana RPC tools
+  const solanaTools = SOLANA_TOOLS.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.input_schema,
+  }));
+  const tools = [...mcpTools, ...solanaTools];
+  console.log(`✓ ${mcpTools.length} DevTools tools + ${solanaTools.length} Solana tools ready (${tools.length} total)\n`);
 
   let result;
   let steps = 0;

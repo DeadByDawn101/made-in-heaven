@@ -20,6 +20,7 @@ import OpenAI from "openai";
 import { buildLoginTask, WAIT_FOR_AUTOFILL, SAVED_CREDENTIALS } from "./password-manager.js";
 import { getMemoryBlock, logTask, learnSite, memorize, indexTask, initMemory } from "./memory.js";
 import { SOLANA_TOOLS, dispatchSolanaTool } from "./solana.js";
+import { executeSwarm, jupiterBuy, jupiterSell } from "./swarm.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -177,6 +178,11 @@ async function callTool(client, name, args) {
     const result = await dispatchSolanaTool(name, args);
     return JSON.stringify(result, null, 2);
   }
+  // Swarm tools — direct execution
+  if (name === "swarm_attack") {
+    const result = await executeSwarm(args);
+    return JSON.stringify(result, null, 2);
+  }
   // All other tools → Chrome DevTools MCP
   const result = await client.callTool({ name, arguments: args });
   return result.content?.map((c) => c.text || JSON.stringify(c)).join("\n") || JSON.stringify(result);
@@ -315,8 +321,24 @@ async function main() {
     description: t.description,
     inputSchema: t.input_schema,
   }));
-  const tools = [...mcpTools, ...solanaTools];
-  console.log(`✓ ${mcpTools.length} DevTools tools + ${solanaTools.length} Solana tools ready (${tools.length} total)\n`);
+  const swarmTools = [{
+    name: "swarm_attack",
+    description: "Execute a 1000-buy swarm attack on a pump.fun token using Jupiter — generates ephemeral wallets, funds them, executes staggered buys, recycles SOL. For $STONEFREE graduation push.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        masterKeyB58: { type: "string", description: "Master wallet private key (bs58 encoded)" },
+        totalSol: { type: "number", description: "Total SOL to deploy (default 3.0)" },
+        targetBuys: { type: "number", description: "Total buy transactions (default 1000)" },
+        walletsPerWave: { type: "number", description: "Wallets per wave (default 100)" },
+        recycleMode: { type: "boolean", description: "Sell tokens and recycle SOL between waves (default true)" },
+        dryRun: { type: "boolean", description: "Simulate only — no real transactions" },
+      },
+      required: ["masterKeyB58"],
+    },
+  }];
+  const tools = [...mcpTools, ...solanaTools, ...swarmTools];
+  console.log(`✓ ${mcpTools.length} DevTools tools + ${solanaTools.length} Solana tools + ${swarmTools.length} Swarm tools ready (${tools.length} total)\n`);
 
   let result;
   let steps = 0;

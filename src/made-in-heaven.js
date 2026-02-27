@@ -21,6 +21,7 @@ import { buildLoginTask, WAIT_FOR_AUTOFILL, SAVED_CREDENTIALS } from "./password
 import { getMemoryBlock, logTask, learnSite, memorize, indexTask, initMemory } from "./memory.js";
 import { SOLANA_TOOLS, dispatchSolanaTool } from "./solana.js";
 import { executeSwarm, jupiterBuy, jupiterSell } from "./swarm.js";
+import { sparkTools, handleSparkTool } from "./spark.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,11 @@ async function callTool(client, name, args) {
     const result = await executeSwarm(args);
     return JSON.stringify(result, null, 2);
   }
+  // Spark Intelligence — self-evolving learning layer
+  if (name.startsWith("spark_")) {
+    const result = await handleSparkTool(name, args);
+    return JSON.stringify(result, null, 2);
+  }
   // All other tools → Chrome DevTools MCP
   const result = await client.callTool({ name, arguments: args });
   return result.content?.map((c) => c.text || JSON.stringify(c)).join("\n") || JSON.stringify(result);
@@ -337,8 +343,13 @@ async function main() {
       required: ["masterKeyB58"],
     },
   }];
-  const tools = [...mcpTools, ...solanaTools, ...swarmTools];
-  console.log(`✓ ${mcpTools.length} DevTools tools + ${solanaTools.length} Solana tools + ${swarmTools.length} Swarm tools ready (${tools.length} total)\n`);
+  const sparkMihTools = sparkTools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.input_schema,
+  }));
+  const tools = [...mcpTools, ...solanaTools, ...swarmTools, ...sparkMihTools];
+  console.log(`✓ ${mcpTools.length} DevTools + ${solanaTools.length} Solana + ${swarmTools.length} Swarm + ${sparkMihTools.length} Spark tools ready (${tools.length} total)\n`);
 
   let result;
   let steps = 0;

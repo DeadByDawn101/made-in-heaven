@@ -177,53 +177,41 @@ def send_sol(from_keypair: Keypair, to_pubkey: str, lamports: int, dry_run: bool
         print(f"    [DRY] Send {lamports/1e9:.4f} SOL → {to_pubkey[:8]}...", flush=True)
         return True
     try:
-        from solders.rpc.requests import SendVersionedTransaction as _
-        from solana.rpc.api import Client
-        from solana.transaction import Transaction as LegacyTx
-        from solders.system_program import transfer, TransferParams
         from solders.hash import Hash
+        from solders.transaction import Transaction as LegacyTx
+        from solders.message import Message
+        from solders.system_program import transfer as sol_transfer_ixn, TransferParams
 
-        client = Client(RPC_URL)
-        bh = get_latest_blockhash()
-        recent_hash = Hash.from_string(bh["blockhash"])
+        bh_data = get_latest_blockhash()
+        recent_hash = Hash.from_string(bh_data["blockhash"])
 
-        ixn = transfer(TransferParams(
+        ixn = sol_transfer_ixn(TransferParams(
             from_pubkey=from_keypair.pubkey(),
             to_pubkey=Pubkey.from_string(to_pubkey),
             lamports=lamports,
         ))
 
-        tx = VersionedTransaction.populate(
-            # Build a simple v0 message
-            type("Message", (), {
-                "header": type("H", (), {"num_required_signatures": 1, "num_readonly_signed_accounts": 0, "num_readonly_unsigned_accounts": 1})(),
-                "account_keys": [from_keypair.pubkey(), Pubkey.from_string(to_pubkey), Pubkey.from_string("11111111111111111111111111111111")],
-                "recent_blockhash": recent_hash,
-                "instructions": [ixn],
-                "address_table_lookups": [],
-            })(),
-            [from_keypair]
-        )
-        sig = client.send_transaction(tx).value
-        time.sleep(2)
-        return bool(sig)
-    except Exception as e:
-        # Fallback: use raw RPC for SOL transfer
-        try:
-            from solana.rpc.api import Client as SolClient
-            from solana.transaction import Transaction as SolTx
-            import solana.system_program as sp
-            sc = SolClient(RPC_URL)
-            ixn = sp.transfer({"from_pubkey": from_keypair.pubkey(), "to_pubkey": Pubkey.from_string(to_pubkey), "lamports": lamports})
-            bh = sc.get_latest_blockhash().value.blockhash
-            tx = SolTx(recent_blockhash=str(bh), fee_payer=from_keypair.pubkey())
-            tx.add(ixn)
-            tx.sign(from_keypair)
-            sc.send_transaction(tx)
-            return True
-        except Exception as e2:
-            print(f"    ❌ SOL transfer failed: {e2}", flush=True)
+        msg = Message.new_with_blockhash([ixn], from_keypair.pubkey(), recent_hash)
+        tx = LegacyTx.new_unsigned(msg)
+        tx.sign([from_keypair], recent_hash)
+
+        raw_b64 = base64.b64encode(bytes(tx)).decode()
+        resp = requests.post(RPC_URL, json={
+            "jsonrpc": "2.0", "id": 1, "method": "sendTransaction",
+            "params": [raw_b64, {"encoding": "base64", "skipPreflight": False, "maxRetries": 3}]
+        }, timeout=30).json()
+
+        if "error" in resp:
+            print(f"    ❌ Transfer RPC error: {resp['error']}", flush=True)
             return False
+        sig = resp.get("result")
+        if sig:
+            time.sleep(1.5)
+            return True
+        return False
+    except Exception as e:
+        print(f"    ❌ SOL transfer failed: {e}", flush=True)
+        return False
 
 
 # ── Buy / Sell ────────────────────────────────────────────────────────────────

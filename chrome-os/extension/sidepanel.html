@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Made in Heaven — RavenX</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #222222;
+      --purple: #8B00FF;
+      --red: #FF0000;
+      --text: #e8e8e8;
+      --muted: #666;
+      --font: 'IBM Plex Mono', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--purple);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-title {
+      color: var(--purple);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header-right { display: flex; gap: 6px; align-items: center; }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #444;
+    }
+    .status-dot.active { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+    .btn-sm {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 3px 8px;
+      font-family: var(--font);
+      font-size: 10px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .btn-sm:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* Ticker */
+    .ticker {
+      background: #0d0d0d;
+      border-bottom: 1px solid var(--border);
+      padding: 4px 12px;
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .ticker span { color: var(--text); }
+    .ticker .up { color: #00ff88; }
+
+    /* Messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .message { border-radius: 2px; padding: 8px 10px; max-width: 100%; word-break: break-word; }
+    .message.user {
+      background: #1a0a2e;
+      border-left: 2px solid var(--purple);
+      align-self: flex-end;
+      max-width: 90%;
+    }
+    .message.assistant {
+      background: var(--surface);
+      border-left: 2px solid #333;
+    }
+    .message.tool-use {
+      background: #0a1a0a;
+      border-left: 2px solid #00aa44;
+      font-size: 10px;
+      color: #00aa44;
+    }
+    .message.tool-result {
+      background: #0a0a1a;
+      border-left: 2px solid #0044aa;
+      font-size: 10px;
+      color: #4488ff;
+    }
+    .message.error {
+      background: #1a0a0a;
+      border-left: 2px solid var(--red);
+      color: var(--red);
+    }
+    .message-label {
+      font-size: 9px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .message pre {
+      white-space: pre-wrap;
+      font-family: var(--font);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    /* Thinking indicator */
+    .thinking {
+      display: none;
+      padding: 6px 12px;
+      color: var(--purple);
+      font-size: 10px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    /* Settings panel */
+    .settings {
+      display: none;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 12px;
+      flex-shrink: 0;
+    }
+    .settings.open { display: block; }
+    .settings label { color: var(--muted); font-size: 10px; display: block; margin-bottom: 4px; }
+    .settings input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 8px;
+      font-family: var(--font);
+      font-size: 11px;
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+    .settings input:focus { outline: none; border-color: var(--purple); }
+    .btn-save {
+      background: var(--purple);
+      border: none;
+      color: white;
+      padding: 6px 16px;
+      font-family: var(--font);
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 2px;
+      width: 100%;
+    }
+    .btn-save:hover { background: #7000cc; }
+
+    /* Input area */
+    .input-area {
+      border-top: 1px solid var(--border);
+      padding: 8px;
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .input-area textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px;
+      font-family: var(--font);
+      font-size: 12px;
+      resize: none;
+      height: 52px;
+      border-radius: 2px;
+      line-height: 1.4;
+    }
+    .input-area textarea:focus { outline: none; border-color: var(--purple); }
+    .btn-send {
+      background: var(--purple);
+      border: none;
+      color: white;
+      padding: 0 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .btn-send:hover { background: #7000cc; }
+    .btn-send:disabled { background: #333; cursor: not-allowed; }
+
+    /* Quick actions */
+    .quick-actions {
+      padding: 4px 8px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .qa {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 2px 7px;
+      font-family: var(--font);
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .qa:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🖤 Made in Heaven</div>
+  <div class="header-right">
+    <div class="status-dot" id="statusDot"></div>
+    <button class="btn-sm" id="btnAttach">Attach Tab</button>
+    <button class="btn-sm" id="btnClear">Clear</button>
+    <button class="btn-sm" id="btnSettings">⚙</button>
+  </div>
+</div>
+
+<div class="ticker" id="ticker">
+  <div>$STONEFREE <span id="curveVal">loading...</span></div>
+  <div>Progress <span id="curveProgress" class="up">--</span></div>
+  <div>Master <span id="masterBal">--</span></div>
+</div>
+
+<div class="messages" id="messages">
+  <div class="message assistant">
+    <div class="message-label">Camila Prime</div>
+    <pre>🖤 Made in Heaven — Chrome OS Edition online.
+
+Tools: Browser control, Solana RPC, Jupiter, $STONEFREE monitoring.
+
+Attach to a tab to start automating, or ask me anything.</pre>
+  </div>
+</div>
+
+<div class="thinking" id="thinking">⚡ Camila is thinking...</div>
+
+<div class="settings" id="settings">
+  <label>Anthropic API Key</label>
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+  <label>Solana RPC URL (optional)</label>
+  <input type="text" id="rpcInput" placeholder="https://api.mainnet-beta.solana.com">
+  <button class="btn-save" id="btnSaveSettings">Save Settings</button>
+</div>
+
+<div class="quick-actions">
+  <button class="qa" data-msg="Check $STONEFREE curve status">curve status</button>
+  <button class="qa" data-msg="Attach to current tab and take a snapshot">snapshot</button>
+  <button class="qa" data-msg="Check master wallet balance: FS9nRSztc9eqiCUEJ1ESyGo9UXSh11Dm2PkEMSFS2Eft">master bal</button>
+  <button class="qa" data-msg="List all open tabs">list tabs</button>
+  <button class="qa" data-msg="Take a screenshot of the current tab">screenshot</button>
+  <button class="qa" data-msg="Navigate to pump.fun/coin/3G36hCsP5DgDT2hGxACivRvzWeuX56mU9DrFibbKpump">pump.fun</button>
+</div>
+
+<div class="input-area">
+  <textarea id="msgInput" placeholder="Ask Camila anything... (Shift+Enter for newline)" rows="2"></textarea>
+  <button class="btn-send" id="btnSend">▲</button>
+</div>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Made in Heaven — RavenX</title>
+  <style>
+    :root {
+      --bg: #080808;
+      --surface: #0f0f0f;
+      --surface2: #151515;
+      --border: #1e1e1e;
+      --purple: #8B00FF;
+      --red: #CC0000;
+      --gold: #FFD700;
+      --green: #00FF88;
+      --text: #e0e0e0;
+      --muted: #555;
+      --font: 'IBM Plex Mono', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── AVATAR ZONE ─────────────────────────────────────── */
+    .avatar-zone {
+      background: linear-gradient(180deg, #0a0a14 0%, #060606 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .avatar-canvas {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 2px solid var(--purple);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      background: #0a000f;
+    }
+    .avatar-canvas canvas { width: 100%; height: 100%; }
+    /* CSS animated avatar fallback */
+    .avatar-silhouette {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: breathe 3s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%,100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.04); filter: brightness(1.15) drop-shadow(0 0 8px var(--persona-color,#8B00FF)); }
+    }
+    .avatar-emoji { font-size: 28px; line-height: 1; }
+    .avatar-info { flex: 1; min-width: 0; }
+    .avatar-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .avatar-title {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .avatar-status {
+      font-size: 9px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-pulse {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+    .avatar-controls { display: flex; flex-direction: column; gap: 4px; }
+    .icon-btn {
+      width: 26px; height: 26px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+    .icon-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .icon-btn.active { border-color: var(--green); color: var(--green); background: #001a0a; }
+
+    /* Speaking animation on avatar */
+    .avatar-canvas.speaking {
+      border-color: var(--green);
+      box-shadow: 0 0 12px var(--green);
+    }
+    .avatar-canvas.thinking {
+      border-color: var(--purple);
+      box-shadow: 0 0 12px var(--purple);
+      animation: spin-border 2s linear infinite;
+    }
+    @keyframes spin-border {
+      0% { box-shadow: 3px 0 12px var(--purple), 0 0 8px transparent; }
+      25% { box-shadow: 0 3px 12px var(--purple), 0 0 8px transparent; }
+      50% { box-shadow: -3px 0 12px var(--purple), 0 0 8px transparent; }
+      75% { box-shadow: 0 -3px 12px var(--purple), 0 0 8px transparent; }
+      100% { box-shadow: 3px 0 12px var(--purple), 0 0 8px transparent; }
+    }
+
+    /* ── TOOLBAR ─────────────────────────────────────────── */
+    .toolbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .toolbar select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 3px 5px;
+      font-family: var(--font);
+      font-size: 10px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .toolbar select:focus { outline: none; border-color: var(--purple); }
+    .toolbar-sep { flex: 1; }
+    .btn-tool {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 3px 7px;
+      font-family: var(--font);
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+    .btn-tool:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* ── TICKER ───────────────────────────────────────────── */
+    .ticker {
+      background: #050505;
+      border-bottom: 1px solid var(--border);
+      padding: 3px 10px;
+      font-size: 9px;
+      color: var(--muted);
+      display: flex;
+      gap: 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .ticker .val { color: var(--text); }
+    .ticker .up { color: var(--green); }
+    .ticker .down { color: var(--red); }
+
+    /* ── MESSAGES ─────────────────────────────────────────── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+    }
+    .msg { border-radius: 2px; padding: 7px 9px; word-break: break-word; }
+    .msg.user { background: #0d001f; border-left: 2px solid var(--purple); align-self: flex-end; max-width: 92%; }
+    .msg.assistant { background: var(--surface); border-left: 2px solid var(--border); }
+    .msg.tool-call { background: #041208; border-left: 2px solid #00aa44; font-size: 10px; color: #00cc55; }
+    .msg.tool-result { background: #04060f; border-left: 2px solid #0044cc; font-size: 10px; color: #4488ff; }
+    .msg.error { background: #0f0404; border-left: 2px solid var(--red); color: var(--red); }
+    .msg.system-msg { background: #080808; border: 1px dashed #222; font-size: 10px; color: var(--muted); text-align: center; }
+    .msg-label { font-size: 9px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+    .msg pre { white-space: pre-wrap; font-family: var(--font); font-size: 11px; line-height: 1.5; }
+    .msg-actions { display: flex; gap: 4px; margin-top: 5px; }
+    .msg-action {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 1px 6px;
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 2px;
+      font-family: var(--font);
+    }
+    .msg-action:hover { color: var(--purple); border-color: var(--purple); }
+
+    /* ── TASK QUEUE ───────────────────────────────────────── */
+    .task-queue {
+      display: none;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      padding: 6px 8px;
+      max-height: 80px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .task-queue.open { display: block; }
+    .task-queue-title { font-size: 9px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 0;
+      font-size: 10px;
+      border-bottom: 1px solid #111;
+    }
+    .task-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .task-status.pending { background: var(--muted); }
+    .task-status.running { background: var(--purple); animation: pulse 1s infinite; }
+    .task-status.done { background: var(--green); }
+    .task-status.error { background: var(--red); }
+    .task-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+
+    /* ── QUICK ACTIONS ────────────────────────────────────── */
+    .quick-actions {
+      padding: 4px 6px;
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .qa {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 2px 6px;
+      font-family: var(--font);
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .qa:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* ── INPUT ───────────────────────────────────────────── */
+    .input-area {
+      border-top: 1px solid var(--border);
+      padding: 6px;
+      display: flex;
+      gap: 5px;
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .input-area textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px;
+      font-family: var(--font);
+      font-size: 12px;
+      resize: none;
+      height: 48px;
+      border-radius: 2px;
+      line-height: 1.4;
+    }
+    .input-area textarea:focus { outline: none; border-color: var(--purple); }
+    .input-btns { display: flex; flex-direction: column; gap: 3px; }
+    .btn-send {
+      background: var(--purple);
+      border: none;
+      color: white;
+      padding: 0 10px;
+      font-family: var(--font);
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 2px;
+      flex: 1;
+    }
+    .btn-send:hover { background: #7000cc; }
+    .btn-send:disabled { background: #222; cursor: not-allowed; }
+    .btn-mic {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .btn-mic:hover { border-color: var(--red); color: var(--red); }
+    .btn-mic.recording { background: #1a0000; border-color: var(--red); color: var(--red); animation: pulse 1s infinite; }
+
+    /* ── SETTINGS DRAWER ──────────────────────────────────── */
+    .settings-drawer {
+      display: none;
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 100%;
+      background: var(--bg);
+      z-index: 100;
+      flex-direction: column;
+      padding: 12px;
+      overflow-y: auto;
+    }
+    .settings-drawer.open { display: flex; }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .settings-title { color: var(--purple); font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .settings-close { background: none; border: 1px solid var(--border); color: var(--muted); padding: 4px 8px; cursor: pointer; font-family: var(--font); border-radius: 2px; }
+    .settings-section { margin-bottom: 16px; }
+    .settings-section-title { font-size: 9px; color: var(--purple); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+    .settings-row { margin-bottom: 8px; }
+    .settings-row label { font-size: 10px; color: var(--muted); display: block; margin-bottom: 3px; }
+    .settings-row input, .settings-row select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 8px;
+      font-family: var(--font);
+      font-size: 11px;
+      border-radius: 2px;
+    }
+    .settings-row input:focus, .settings-row select:focus { outline: none; border-color: var(--purple); }
+    .btn-save-settings {
+      background: var(--purple); border: none; color: white;
+      padding: 7px; font-family: var(--font); font-size: 11px;
+      cursor: pointer; border-radius: 2px; width: 100%; margin-top: 4px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- SETTINGS DRAWER -->
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="settings-header">
+    <span class="settings-title">⚙ Settings</span>
+    <button class="settings-close" id="btnCloseSettings">✕ Close</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">API Keys</div>
+    <div class="settings-row">
+      <label>Anthropic (Claude)</label>
+      <input type="password" id="keyAnthropic" placeholder="sk-ant-...">
+    </div>
+    <div class="settings-row">
+      <label>xAI (Grok / SuperGrok)</label>
+      <input type="password" id="keyXai" placeholder="xai-...">
+    </div>
+    <div class="settings-row">
+      <label>Google (Gemini)</label>
+      <input type="password" id="keyGoogle" placeholder="AIza...">
+    </div>
+    <div class="settings-row">
+      <label>Ollama URL (local)</label>
+      <input type="text" id="ollamaUrl" placeholder="http://m4max.beardie-ph.ts.net:11434">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Voice</div>
+    <div class="settings-row">
+      <label>TTS Voice</label>
+      <select id="voiceSelect"><option>Loading voices...</option></select>
+    </div>
+    <div class="settings-row">
+      <label>Speech Rate</label>
+      <input type="range" id="voiceRate" min="0.5" max="1.5" step="0.1" value="0.95" style="padding:0">
+    </div>
+    <div class="settings-row">
+      <label>Pitch</label>
+      <input type="range" id="voicePitch" min="0.5" max="1.5" step="0.1" value="1.1" style="padding:0">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Empire Wallets</div>
+    <div class="settings-row">
+      <label>Master Wallet Address</label>
+      <input type="text" id="masterWallet" value="FS9nRSztc9eqiCUEJ1ESyGo9UXSh11Dm2PkEMSFS2Eft">
+    </div>
+  </div>
+
+  <button class="btn-save-settings" id="btnSaveSettings">💾 Save All Settings</button>
+</div>
+
+<!-- AVATAR ZONE -->
+<div class="avatar-zone" id="avatarZone">
+  <div class="avatar-canvas" id="avatarCanvas">
+    <div class="avatar-silhouette" id="avatarSilhouette">
+      <span class="avatar-emoji" id="avatarEmoji">🖤</span>
+    </div>
+  </div>
+  <div class="avatar-info">
+    <div class="avatar-name" id="avatarName">Camila Prime</div>
+    <div class="avatar-title" id="avatarTitle">CFO/CTO — Dark Flame</div>
+    <div class="avatar-status">
+      <div class="status-pulse" id="statusPulse"></div>
+      <span id="statusText" style="font-size:9px;color:#555">ready</span>
+    </div>
+  </div>
+  <div class="avatar-controls">
+    <button class="icon-btn" id="btnVoice" title="Toggle voice output">🔊</button>
+    <button class="icon-btn" id="btnSettings" title="Settings">⚙</button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <select id="personaSelect" title="Choose persona">
+    <option value="camila">🖤 Camila</option>
+    <option value="maya">🦂 Maya</option>
+    <option value="raven">🖤 Raven</option>
+    <option value="sheila">👑 Sheila</option>
+    <option value="aria">⚡ Aria</option>
+  </select>
+  <select id="providerSelect" title="AI provider">
+    <option value="claude">Claude</option>
+    <option value="grok">Grok (xAI)</option>
+    <option value="gemini">Gemini</option>
+    <option value="ollama">Ollama (local)</option>
+  </select>
+  <select id="modelSelect" title="Model">
+    <option value="claude-sonnet-4-6">sonnet-4-6</option>
+  </select>
+  <div class="toolbar-sep"></div>
+  <button class="btn-tool" id="btnAttach">Attach</button>
+  <button class="btn-tool" id="btnQueue" title="Task queue">Queue</button>
+  <button class="btn-tool" id="btnClear">Clear</button>
+</div>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div>$STONEFREE <span class="val up" id="curveVal">--</span></div>
+  <div><span class="val" id="curveProgress">--%</span></div>
+  <div>Master <span class="val" id="masterBal">--</span></div>
+  <div>Bump <span class="val" id="bumpStatus">--</span></div>
+</div>
+
+<!-- MESSAGES -->
+<div class="messages" id="messages">
+  <div class="msg assistant">
+    <div class="msg-label">Camila Prime</div>
+    <pre>🖤 Made in Heaven — Super Agent Edition.
+
+Multi-model · Voice I/O · Browser Control · Solana · Sister VPs · Task Queue
+
+Select a persona. Choose your model. Attach to a tab. Execute.</pre>
+  </div>
+</div>
+
+<!-- TASK QUEUE PANEL -->
+<div class="task-queue" id="taskQueue">
+  <div class="task-queue-title">Task Queue</div>
+  <div id="taskList"></div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="quick-actions">
+  <button class="qa" data-msg="Check $STONEFREE curve status">curve</button>
+  <button class="qa" data-msg="Attach to current tab and snapshot">snapshot</button>
+  <button class="qa" data-msg="Check master wallet balance: FS9nRSztc9eqiCUEJ1ESyGo9UXSh11Dm2PkEMSFS2Eft">master</button>
+  <button class="qa" data-msg="Navigate to https://pump.fun/coin/3G36hCsP5DgDT2hGxACivRvzWeuX56mU9DrFibbKpump">pump.fun</button>
+  <button class="qa" data-msg="Navigate to https://dexscreener.com/solana/3G36hCsP5DgDT2hGxACivRvzWeuX56mU9DrFibbKpump">dexscreener</button>
+  <button class="qa" data-msg="List all open tabs">tabs</button>
+  <button class="qa" id="qaAddTask">+ task</button>
+</div>
+
+<!-- INPUT -->
+<div class="input-area">
+  <textarea id="msgInput" placeholder="Message Camila... (Enter to send, Shift+Enter newline)"></textarea>
+  <div class="input-btns">
+    <button class="btn-send" id="btnSend">▲</button>
+    <button class="btn-mic" id="btnMic" title="Voice input">🎤</button>
+  </div>
+</div>
+
+<script type="module" src="sidepanel_v2.js"></script>
+</body>
+</html>

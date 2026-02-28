@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Made in Heaven — RavenX Agent",
-  "version": "1.0.0",
-  "description": "RavenX AI browser agent. Claude-powered automation, Solana tools, and empire operations. Native Chrome OS.",
+  "name": "Made in Heaven — RavenX Super Agent",
+  "version": "2.0.0",
+  "description": "All-in-one AI companion. Multi-model (Claude/Grok/Gemini/Ollama) · Voice I/O · Browser automation · Sister VP personas · Solana tools · Task queue. Native Chrome OS.",
 
   "permissions": [
     "debugger",
@@ -11,14 +11,20 @@
     "storage",
     "sidePanel",
     "scripting",
-    "notifications"
+    "notifications",
+    "tts"
   ],
 
   "host_permissions": [
     "https://api.anthropic.com/*",
+    "https://api.x.ai/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://lite-api.jup.ag/*",
     "https://quote-api.jup.ag/*",
     "https://api.mainnet-beta.solana.com/*",
     "https://api.devnet.solana.com/*",
+    "http://localhost:11434/*",
+    "http://*.beardie-ph.ts.net:11434/*",
     "<all_urls>"
   ],
 
@@ -28,23 +34,27 @@
   },
 
   "side_panel": {
-    "default_path": "sidepanel.html"
+    "default_path": "sidepanel_v2.html"
   },
 
   "action": {
-    "default_title": "Made in Heaven",
+    "default_title": "Made in Heaven — RavenX",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
-      "48": "icons/icon48.png",
+      "16":  "icons/icon16.png",
+      "32":  "icons/icon32.png",
+      "48":  "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
 
   "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
+    "16":  "icons/icon16.png",
+    "32":  "icons/icon32.png",
+    "48":  "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

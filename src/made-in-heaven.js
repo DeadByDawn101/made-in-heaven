@@ -22,6 +22,7 @@ import { getMemoryBlock, logTask, learnSite, memorize, indexTask, initMemory } f
 import { SOLANA_TOOLS, dispatchSolanaTool } from "./solana.js";
 import { executeSwarm, jupiterBuy, jupiterSell } from "./swarm.js";
 import { sparkTools, handleSparkTool } from "./spark.js";
+import { FIRECRAWL_TOOLS, handleFirecrawlTool } from "./firecrawl.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -189,6 +190,11 @@ async function callTool(client, name, args) {
     const result = await handleSparkTool(name, args);
     return JSON.stringify(result, null, 2);
   }
+  // Firecrawl native extraction tools
+  if (name.startsWith("firecrawl_")) {
+    const result = await handleFirecrawlTool(name, args);
+    return JSON.stringify(result, null, 2);
+  }
   // All other tools → Chrome DevTools MCP
   const result = await client.callTool({ name, arguments: args });
   return result.content?.map((c) => c.text || JSON.stringify(c)).join("\n") || JSON.stringify(result);
@@ -348,8 +354,13 @@ async function main() {
     description: t.description,
     inputSchema: t.input_schema,
   }));
-  const tools = [...mcpTools, ...solanaTools, ...swarmTools, ...sparkMihTools];
-  console.log(`✓ ${mcpTools.length} DevTools + ${solanaTools.length} Solana + ${swarmTools.length} Swarm + ${sparkMihTools.length} Spark tools ready (${tools.length} total)\n`);
+  const firecrawlTools = FIRECRAWL_TOOLS.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.input_schema,
+  }));
+  const tools = [...mcpTools, ...solanaTools, ...swarmTools, ...sparkMihTools, ...firecrawlTools];
+  console.log(`✓ ${mcpTools.length} DevTools + ${solanaTools.length} Solana + ${swarmTools.length} Swarm + ${sparkMihTools.length} Spark + ${firecrawlTools.length} Firecrawl tools ready (${tools.length} total)\n`);
 
   let result;
   let steps = 0;

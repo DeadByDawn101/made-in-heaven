@@ -26,8 +26,12 @@ import { FIRECRAWL_TOOLS, handleFirecrawlTool } from "./firecrawl.js";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const CHROME_URL = process.env.CHROME_URL || "http://127.0.0.1:9222";
-const MCP_BIN   = process.env.MCP_BIN || (process.env.HOME + "/.local/bin/chrome-devtools-mcp");
+const CHROME_URL   = process.env.CHROME_URL || "http://127.0.0.1:9222";
+const MCP_BIN      = process.env.MCP_BIN || (process.env.HOME + "/.local/bin/chrome-devtools-mcp");
+// Auto-connect mode: uses Chrome M144+ native remote debugging (no --remote-debugging-port needed)
+// Set AUTO_CONNECT=1 in .env or pass --auto-connect flag. Chrome must have
+// chrome://inspect/#remote-debugging enabled. You'll click Allow once — Chrome remembers it.
+const AUTO_CONNECT = process.env.AUTO_CONNECT === "1" || flag("--auto-connect");
 const MAX_STEPS  = parseInt(process.env.MAX_STEPS || "20");
 
 const argv = process.argv.slice(2);
@@ -53,12 +57,19 @@ const GROK_MODEL = process.env.GROK_MODEL || "grok-4-0709";
 // ── MCP Client ────────────────────────────────────────────────────────────────
 
 async function createMCPClient() {
+  // Auto-connect: Chrome M144+ native remote debugging (no --remote-debugging-port needed)
+  // Traditional: connects to Chrome running with --remote-debugging-port=9222
+  const args = AUTO_CONNECT
+    ? ["--autoConnect", "--no-usage-statistics"]
+    : ["--browserUrl", CHROME_URL, "--no-usage-statistics"];
+
   const transport = new StdioClientTransport({
     command: MCP_BIN,
-    args: ["--browserUrl", CHROME_URL, "--no-usage-statistics"],
+    args,
   });
-  const client = new Client({ name: "made-in-heaven", version: "0.1.0" }, { capabilities: {} });
+  const client = new Client({ name: "made-in-heaven", version: "0.2.0" }, { capabilities: {} });
   await client.connect(transport);
+  console.log(`🔌 MCP connected (${AUTO_CONNECT ? "autoConnect" : `browserUrl: ${CHROME_URL}`})`);
   return client;
 }
 
